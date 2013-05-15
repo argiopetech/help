@@ -1,0 +1,19 @@
+name:                HELP
+version:             0.1.0.0
+synopsis:            The Handy Haskell Enterprise Logging Platform
+description:
+    The Handy Haskell Enterprise Logging Platform is my response to dependency-heavy, often slow, or generally non-intuitive log storage and search solutions. Begun as a graduate research project required for the completion of my Master's degree in Software Engineering at Embry-Riddle Aeronautical University, HELP seeks to provide a simple "plug-and-play" logging platform which, with the installation of only a database and the HELP binary, will allow systems administrators to collect, archive, and search logs with a convenient web-based, content-aware interface. Specific goals of the project include high-throughput logging through TCP and UDP sockets and a "manager-friendly" search interface.
+license:             BSD3
+license-file:        LICENSE
+author:              Elliot Robinson
+maintainer:          elliot.robinson@argiopetech.com
+copyright:           2013
+category:            Data
+build-type:          Simple
+cabal-version:       >=1.8
+
+executable help
+  main-is:             Help/Main.hs
+  extensions:          LambdaCase, NoImplicitPrelude, UnicodeSyntax
+  other-modules:       Help.UI.Cats
+  build-depends:       base ==4.6.*
