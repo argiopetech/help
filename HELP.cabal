@@ -13,7 +13,20 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 executable help
-  main-is:             Help/Main.hs
+  main-is:             Main.hs
   extensions:          LambdaCase, NoImplicitPrelude, UnicodeSyntax
-  other-modules:       Help.UI.Cats
-  build-depends:       base ==4.6.*
+  hs-source-dirs:      src
+  other-modules:       Help.UI
+                       Help.Imports
+                       Help.Settings
+                       Help.Logging
+                       Help.Logging.Receive
+                       Help.Logging.Store
+                       Help.Logging.Parse
+                       Help.UI.AdminConsole.Internal
+                       Help.UI.WebSearch.Internal
+                       Help.UI.WebSearch
+                       Help.UI.AdminConsole
+
+  build-depends:       base >= 4.6
+                     , classy-prelude >= 0.5

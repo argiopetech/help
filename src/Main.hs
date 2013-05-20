@@ -1,14 +1,24 @@
+{-# LANGUAGE NoImplicitPrelude, UnicodeSyntax #-}
 module Main where
 
+import Help.Imports
 import Help.Logging
 import Help.Settings
-import Help.UI
+import Help.UI.WebSearch
+import Help.UI.AdminConsole
 
 import Control.Concurrent
 
-main :: IO ()
+main ∷ IO ()
 main = do
-    s <- loadSettings undefined
+    cliSettings ← loadCLISettings
+    ymlSettings ← loadYMLSettings yamlFile
+    let settings = cliSettings `overrides` ymlSettings `overrides` defaultSettings
 
-    _ <- forkIO $ undefined
+
+    _ ← forkIO $ webSearch settings
+    _ ← forkIO $ adminConsole settings
     undefined
+
+yamlFile ∷ String
+yamlFile = undefined
