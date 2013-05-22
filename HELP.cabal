@@ -30,3 +30,6 @@ executable help
 
   build-depends:       base >= 4.6
                      , classy-prelude >= 0.5
+                     , threads >= 0.5
+                     , stm >= 2.4
+                     , base-unicode-symbols >= 0.2
