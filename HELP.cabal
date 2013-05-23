@@ -33,3 +33,4 @@ executable help
                      , threads >= 0.5
                      , stm >= 2.4
                      , base-unicode-symbols >= 0.2
+                     , lens >= 3.6
