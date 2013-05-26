@@ -5,6 +5,8 @@ module Help.Settings ( -- *The Settings type
                      , ymlFile
                      , loadMode
                      , logFile
+                     , adminHost
+                     , adminPort
                        -- *Utilities
                      , loadSettings
                      ) where
@@ -17,6 +19,8 @@ import Control.Lens.Getter (to, Getter)
 data Settings = Settings { _ymlFile  ∷ FilePath
                          , _loadMode ∷ Bool
                          , _logFile  ∷ FilePath
+                         , _adminHost ∷ FilePath
+                         , _adminPort ∷ Int
                          } deriving (Show)
 
 ymlFile ∷ Getter Settings Text
@@ -27,6 +31,12 @@ loadMode = to _loadMode
 
 logFile ∷ Getter Settings Text
 logFile = to _logFile
+
+adminHost ∷ Getter Settings FilePath
+adminHost = to _adminHost
+
+adminPort ∷ Getter Settings Int
+adminPort = to _adminPort
 
 data TempSettings = TempSettings { tempYmlFile  ∷ (Maybe FilePath)
                                  , tempLoadMode ∷ (Maybe Bool)

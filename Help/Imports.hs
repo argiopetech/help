@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude, UnicodeSyntax #-}
 -- |Help.Imports provides a central location for universally shared exports, primarily
 --  the non-standard Prelude.
 module Help.Imports ( -- *Overrides
