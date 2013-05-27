@@ -15,7 +15,6 @@ cabal-version:       >=1.8
 executable help
   main-is:             Main.hs
   extensions:          LambdaCase, NoImplicitPrelude, UnicodeSyntax
-  hs-source-dirs:      src
   other-modules:       Help.UI
                        Help.Imports
                        Help.Settings
@@ -34,3 +33,6 @@ executable help
                      , stm >= 2.4
                      , base-unicode-symbols >= 0.2
                      , lens >= 3.6
+                     , ekg >= 0.3
+                     , text >= 0.11
+  ghc-options: -Wall -threaded -with-rtsopts=-T -with-rtsopts=-N

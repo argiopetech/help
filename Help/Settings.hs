@@ -13,7 +13,6 @@ module Help.Settings ( -- *The Settings type
 
 import Help.Imports
 
-import Control.Applicative
 import Control.Lens.Getter (to, Getter)
 
 data Settings = Settings { _ymlFile  ∷ FilePath
