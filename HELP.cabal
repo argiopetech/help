@@ -36,3 +36,24 @@ executable help
                      , ekg >= 0.3
                      , text >= 0.11
   ghc-options: -Wall -threaded -with-rtsopts=-T -with-rtsopts=-N
+
+Test-Suite test-help
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is:        test-help.hs
+  extensions:     LambdaCase, NoImplicitPrelude, UnicodeSyntax
+  build-depends:  base >= 4.6
+                , classy-prelude >= 0.5
+                , hspec >= 1.5
+                , QuickCheck >= 2.5
+  ghc-options: -Wall -threaded -with-rtsopts=-N
+
+Benchmark bench-help
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: bench
+  main-is:        bench-main.hs
+  extensions:     LambdaCase, NoImplicitPrelude, UnicodeSyntax
+  build-depends:  base >= 4.6
+                , classy-prelude >= 0.5
+                , criterion >= 0.6
+  ghc-options: -Wall -threaded -with-rtsopts=-N
