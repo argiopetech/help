@@ -15,7 +15,6 @@ cabal-version:       >=1.8
 executable help
   main-is:             Main.hs
   extensions:          LambdaCase, NoImplicitPrelude, UnicodeSyntax
-  hs-source-dirs:      src
   other-modules:       Help.UI
                        Help.Imports
                        Help.Settings
@@ -34,3 +33,35 @@ executable help
                      , stm >= 2.4
                      , base-unicode-symbols >= 0.2
                      , lens >= 3.6
+                     , ekg >= 0.3
+                     , text >= 0.11
+                     , options >= 0.1
+                     , yaml-config >= 0.0.1
+                     , mongoDB >= 1.3
+                     , bytestring >= 0.10
+                     , transformers >= 0.3
+                     , conduit >= 1.0.4
+                     , attoparsec-conduit >= 1.0
+                     , attoparsec >= 0.10.4
+  ghc-options: -Wall -threaded -with-rtsopts=-T -with-rtsopts=-N
+
+Test-Suite test-help
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is:        test-help.hs
+  extensions:     LambdaCase, NoImplicitPrelude, UnicodeSyntax
+  build-depends:  base >= 4.6
+                , classy-prelude >= 0.5
+                , hspec >= 1.5
+                , QuickCheck >= 2.5
+  ghc-options: -Wall -threaded -with-rtsopts=-N
+
+Benchmark bench-help
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: bench
+  main-is:        bench-main.hs
+  extensions:     LambdaCase, NoImplicitPrelude, UnicodeSyntax
+  build-depends:  base >= 4.6
+                , classy-prelude >= 0.5
+                , criterion >= 0.6
+  ghc-options: -Wall -threaded -with-rtsopts=-N
