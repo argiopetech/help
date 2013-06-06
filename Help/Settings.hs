@@ -14,12 +14,15 @@ module Help.Settings ( -- *The Settings type
 import Help.Imports
 
 import Control.Lens.Getter (to, Getter)
+import Data.Yaml.Config
+import Options
 
 data Settings = Settings { _ymlFile  ∷ FilePath
                          , _loadMode ∷ Bool
                          , _logFile  ∷ FilePath
                          , _adminHost ∷ FilePath
                          , _adminPort ∷ Int
+                         , _mongoHost ∷ String
                          } deriving (Show)
 
 ymlFile ∷ Getter Settings Text
@@ -37,9 +40,12 @@ adminHost = to _adminHost
 adminPort ∷ Getter Settings Int
 adminPort = to _adminPort
 
-data TempSettings = TempSettings { tempYmlFile  ∷ (Maybe FilePath)
-                                 , tempLoadMode ∷ (Maybe Bool)
-                                 , tempLogFile  ∷ (Maybe FilePath)
+data TempSettings = TempSettings { tempYmlFile  ∷ Maybe FilePath
+                                 , tempLoadMode ∷ Maybe Bool
+                                 , tempLogFile  ∷ Maybe FilePath
+                                 , tempAdminHost ∷ Maybe FilePath
+                                 , tempAdminPort ∷ Maybe Int
+                                 , tempMongoHost ∷ Maybe String
                                  }
 
 -- |Loads all settings and creates one authoritative set

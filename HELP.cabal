@@ -35,6 +35,14 @@ executable help
                      , lens >= 3.6
                      , ekg >= 0.3
                      , text >= 0.11
+                     , options >= 0.1
+                     , yaml-config >= 0.0.1
+                     , mongoDB >= 1.3
+                     , bytestring >= 0.10
+                     , transformers >= 0.3
+                     , conduit >= 1.0.4
+                     , attoparsec-conduit >= 1.0
+                     , attoparsec >= 0.10.4
   ghc-options: -Wall -threaded -with-rtsopts=-T -with-rtsopts=-N
 
 Test-Suite test-help
