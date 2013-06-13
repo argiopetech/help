@@ -33,7 +33,7 @@ logInterface s = undefined
 -- |Uses a Conduit to iterate over the provided log file, parse log entries, and insert them into a database
 loadFile ∷ Settings -> IO ()
 loadFile s = do
-    pipe <- runIOE $ connect (host "127.0.0.1")
+    pipe <- runIOE $ connect $ host $ mongoHost ^$ s
     runResourceT $ sourceFile (unpack $ logFile ^$ s) $$ sink pipe
     close pipe
 

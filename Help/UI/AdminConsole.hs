@@ -6,7 +6,7 @@ import Help.Settings
 
 import Control.Lens
 import System.Remote.Monitoring
-import qualified Data.Text.Encoding as E
+import qualified Data.ByteString.Char8 as BC
 
 adminConsole ∷ Settings → IO ()
-adminConsole s = void $ forkServer (E.encodeUtf8 $ adminHost ^$ s) (adminPort ^$ s)
+adminConsole s = void $ forkServer (BC.pack $ adminHost ^$ s) (adminPort ^$ s)

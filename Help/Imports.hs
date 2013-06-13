@@ -12,4 +12,4 @@ import ClassyPrelude hiding (FilePath)
 import Data.Eq.Unicode
 
 -- |Overrides the default @ClassyPrelude@ @FilePath@ for fun and profit.
-type FilePath = Text
+type FilePath = String
