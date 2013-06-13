@@ -1,0 +1,3 @@
+adminHost: localhost
+adminPort: 8080
+mongoHost: 127.0.0.1

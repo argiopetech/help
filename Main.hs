@@ -11,13 +11,13 @@ import Control.Concurrent hiding (forkIO)
 import Control.Concurrent.STM
 import Control.Concurrent.Thread.Group
 
-import Control.Lens ((^.))
+import Control.Lens ((^$))
 
 main ∷ IO ()
 main = do
     settings ← loadSettings
 
-    if settings ^. loadMode
+    if not $ null $ logFile ^$ settings
       then loadFile settings
       else do
           g  ← new -- Creates a new thread group
