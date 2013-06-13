@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, NoImplicitPrelude, UnicodeSyntax, LambdaCase #-}
+{-# LANGUAGE OverloadedStrings, NoImplicitPrelude, UnicodeSyntax, LambdaCase, RankNTypes, KindSignatures #-}
 module Help.Logging where
 
 import Help.Imports hiding (take)
@@ -15,6 +15,7 @@ import Data.Attoparsec.ByteString.Char8
 import Data.Conduit
 import Data.Conduit.Attoparsec
 import Data.Conduit.Binary hiding (take, lines)
+import Data.Conduit.Network
 
 import Data.Text.Encoding as E
 
@@ -28,21 +29,28 @@ data LogEntry = LogEntry { time :: ByteString
 
 -- |Spawn listerners on all specified ports to receive, parse, and insert logs into a database
 logInterface ∷ Settings → IO ()
-logInterface s = undefined
+logInterface s = do
+    let sSettings = serverSettings (logPort ^$ s) HostAny
+    runTCPServer sSettings app
+        where app ∷ Application IO
+              app a = do
+                     pipe ← runIOE $ connect $ host $ mongoHost ^$ s
+                     appSource a $$ sink pipe
+                     close pipe
 
 -- |Uses a Conduit to iterate over the provided log file, parse log entries, and insert them into a database
-loadFile ∷ Settings -> IO ()
+loadFile ∷ Settings → IO ()
 loadFile s = do
-    pipe <- runIOE $ connect $ host $ mongoHost ^$ s
+    pipe ← runIOE $ connect $ host $ mongoHost ^$ s
     runResourceT $ sourceFile (unpack $ logFile ^$ s) $$ sink pipe
     close pipe
 
-sink :: Pipe -> ConduitM ByteString o (ResourceT IO) ()
+sink :: forall (m ∷ * → *). (MonadThrow m, MonadIO m) ⇒ Pipe → Sink ByteString m ()
 sink pipe = go
     where go = do
               await >>= \case
-                    Nothing  -> return ()
-                    (Just m) -> do
+                    Nothing  → return ()
+                    (Just m) → do
                         leftover m
                         l <- sinkParser logEntry
 

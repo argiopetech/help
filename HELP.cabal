@@ -43,6 +43,7 @@ executable help
                      , conduit >= 1.0.4
                      , attoparsec-conduit >= 1.0
                      , attoparsec >= 0.10.4
+                     , network-conduit >= 1.0
   ghc-options: -Wall -threaded -with-rtsopts=-T -with-rtsopts=-N
 
 Test-Suite test-help

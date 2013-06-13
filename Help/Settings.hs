@@ -6,6 +6,7 @@ module Help.Settings ( -- *The Settings type
                      , logFile
                      , adminHost
                      , adminPort
+                     , logPort
                      , mongoHost
                        -- *Utilities
                      , loadSettings
@@ -21,6 +22,7 @@ data Settings = Settings { _ymlFile  ∷ FilePath
                          , _logFile  ∷ FilePath
                          , _adminHost ∷ FilePath
                          , _adminPort ∷ Int
+                         , _logPort ∷ Int
                          , _mongoHost ∷ String
                          } deriving (Show)
 
@@ -36,6 +38,9 @@ adminHost = to _adminHost
 adminPort ∷ Getter Settings Int
 adminPort = to _adminPort
 
+logPort ∷ Getter Settings Int
+logPort = to _logPort
+
 mongoHost ∷ Getter Settings String
 mongoHost = to _mongoHost
 
@@ -43,6 +48,7 @@ data TempSettings = TempSettings { tempYmlFile  ∷ Maybe FilePath
                                  , tempLogFile  ∷ Maybe FilePath
                                  , tempAdminHost ∷ Maybe String
                                  , tempAdminPort ∷ Maybe Int
+                                 , tempLogPort ∷ Maybe Int
                                  , tempMongoHost ∷ Maybe String
                                  }
 
@@ -61,8 +67,8 @@ loadSettings = do
 
 -- |Changes a TempSettings to a Settings, assuming it contains all required options
 verifySettings ∷ TempSettings → Settings
-verifySettings (TempSettings (Just s1) (Just s2) (Just s3) (Just s4) (Just s5)) = Settings s1 s2 s3 s4 s5
-verifySettings _ = error "Not all settings set" -- TODO: Handle this more nicely
+verifySettings (TempSettings (Just s1) (Just s2) (Just s3) (Just s4) (Just s5) (Just s6)) = Settings s1 s2 s3 s4 s5 s6
+verifySettings _ = error "Not all settings set" -- TODO: Handle this better
 
 -- |Loads command-line settings from the output of @getArgs@
 loadCLISettings ∷ IO TempSettings
@@ -76,16 +82,17 @@ loadYMLSettings yamlFile = do
     yaml <- YAML.load yamlFile
     let aHost = YAML.lookup yaml "adminHost"
         aPort = YAML.lookup yaml "adminPort"
+        lPort = YAML.lookup yaml "logPort"
         mHost = YAML.lookup yaml "mongoHost"
-    return $ TempSettings Nothing Nothing aHost aPort mHost
+    return $ TempSettings Nothing Nothing aHost aPort lPort mHost
 
 -- |Default settings
 defaultSettings ∷ TempSettings
-defaultSettings = TempSettings (Just "help.yaml") Nothing (Just "localhost") (Just 8080) (Just "127.0.0.1")
+defaultSettings = TempSettings (Just "help.yaml") Nothing (Just "localhost") (Just 8080) Nothing (Just "127.0.0.1")
 
 -- |Empty settings
 emptySettings ∷ TempSettings
-emptySettings = TempSettings Nothing Nothing Nothing Nothing Nothing
+emptySettings = TempSettings Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- |Takes two TempSettings and returns a new TempSettings, favoring settings in the first over the second
 overrides ∷ TempSettings → TempSettings → TempSettings
@@ -101,10 +108,13 @@ overrides ns os = let yF = if isJust $ tempYmlFile ns
                       aP = if isJust $ tempAdminPort ns
                              then tempAdminPort ns
                              else tempAdminPort os
+                      lP = if isJust $ tempLogPort ns
+                             then tempLogPort ns
+                             else tempLogPort os
                       mH = if isJust $ tempMongoHost ns
                              then tempMongoHost ns
                              else tempMongoHost os
-                  in TempSettings yF lF aH aP mH
+                  in TempSettings yF lF aH aP lP mH
 
 -- |Pull the YAML file from TempSettings. In the event that the current stack doesn't have a file, fallback to default.
 --
