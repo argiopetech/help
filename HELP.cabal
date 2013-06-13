@@ -43,7 +43,8 @@ executable help
                      , conduit >= 1.0.4
                      , attoparsec-conduit >= 1.0
                      , attoparsec >= 0.10.4
-  ghc-options: -Wall -threaded -with-rtsopts=-T -with-rtsopts=-N
+                     , network-conduit >= 1.0
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
 Test-Suite test-help
   type:           exitcode-stdio-1.0
