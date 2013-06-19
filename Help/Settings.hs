@@ -4,11 +4,17 @@ module Help.Settings ( -- *The Settings type
                        -- *Lens getters for Settings
                      , ymlFile
                      , logFile
+                     , logCollection
                      , adminHost
                      , adminPort
-                     , logPort
-                     , logCollection
+                     , database
+                     , servers
                      , mongoHost
+                       -- *The TCPConnection type
+                     , TCPConnection
+                       -- *Lens getters for TCPConnections
+                     , port
+                     , collection
                        -- *Utilities
                      , loadSettings
                      ) where
@@ -17,16 +23,30 @@ import Help.Imports
 
 import Control.Lens.Getter (to, Getter)
 import qualified Data.Yaml.Config as YAML (lookup, load)
+
+import Data.Aeson.Types
+
 import Options
 
 data Settings = Settings { _ymlFile  ∷ FilePath
                          , _logFile  ∷ FilePath
+                         , _logCollection ∷ Text
+                         , _database ∷ Text
                          , _adminHost ∷ FilePath
                          , _adminPort ∷ Int
-                         , _logPort ∷ Int
-                         , _logCollection ∷ Text
+                         , _servers ∷ [TCPConnection]
                          , _mongoHost ∷ String
                          } deriving (Show)
+
+data TCPConnection = TCPConnection { _port ∷ Int
+                                   , _collection ∷ Text
+                                   } deriving (Show)
+
+instance FromJSON TCPConnection where
+    parseJSON (Object v) = TCPConnection <$>
+                                v .: "port" <*>
+                                v .: "collection"
+    parseJSON _          = empty
 
 ymlFile ∷ Getter Settings FilePath
 ymlFile = to _ymlFile
@@ -34,27 +54,37 @@ ymlFile = to _ymlFile
 logFile ∷ Getter Settings FilePath
 logFile = to _logFile
 
+logCollection ∷ Getter Settings Text
+logCollection = to _logCollection
+
+database ∷ Getter Settings Text
+database = to _database
+
 adminHost ∷ Getter Settings FilePath
 adminHost = to _adminHost
 
 adminPort ∷ Getter Settings Int
 adminPort = to _adminPort
 
-logPort ∷ Getter Settings Int
-logPort = to _logPort
+servers ∷ Getter Settings [TCPConnection]
+servers = to _servers
 
-logCollection ∷ Getter Settings Text
-logCollection = to _logCollection
+port ∷ Getter TCPConnection Int
+port = to _port
+
+collection ∷ Getter TCPConnection Text
+collection = to _collection
 
 mongoHost ∷ Getter Settings String
 mongoHost = to _mongoHost
 
 data TempSettings = TempSettings { tempYmlFile  ∷ Maybe FilePath
                                  , tempLogFile  ∷ Maybe FilePath
+                                 , tempLogCollection ∷ Maybe Text
+                                 , tempDatabase ∷ Maybe Text
                                  , tempAdminHost ∷ Maybe String
                                  , tempAdminPort ∷ Maybe Int
-                                 , tempLogPort ∷ Maybe Int
-                                 , tempLogCollection ∷ Maybe Text
+                                 , tempServers ∷ Maybe [TCPConnection]
                                  , tempMongoHost ∷ Maybe String
                                  }
 
@@ -75,7 +105,7 @@ loadSettings = do
 
 -- |Changes a TempSettings to a Settings, assuming it contains all required options
 verifySettings ∷ TempSettings → Settings
-verifySettings (TempSettings (Just s1) (Just s2) (Just s3) (Just s4) (Just s5) (Just s6) (Just s7)) = Settings s1 s2 s3 s4 s5 s6 s7
+verifySettings (TempSettings (Just s1) (Just s2) (Just s3) (Just s4) (Just s5) (Just s6) (Just s7) (Just s8)) = Settings s1 s2 s3 s4 s5 s6 s7 s8
 verifySettings _ = error "Not all settings set" -- TODO: Handle this better
 
 -- |Loads command-line settings from the output of @getArgs@
@@ -93,18 +123,18 @@ loadYMLSettings yamlFile = do
     yaml <- YAML.load yamlFile
     let aHost = YAML.lookup yaml "adminHost"
         aPort = YAML.lookup yaml "adminPort"
-        lPort = YAML.lookup yaml "logPort"
-        lColl = YAML.lookup yaml "logCollection"
+        serve = YAML.lookup yaml "servers"
         mHost = YAML.lookup yaml "mongoHost"
-    return $ TempSettings Nothing Nothing aHost aPort lPort lColl mHost
+        datab = YAML.lookup yaml "database"
+    return $ TempSettings Nothing Nothing datab Nothing aHost aPort serve mHost
 
 -- |Default settings
 defaultSettings ∷ TempSettings
-defaultSettings = TempSettings (Just "help.yaml") Nothing (Just "localhost") (Just 8080) Nothing Nothing (Just "127.0.0.1")
+defaultSettings = TempSettings (Just "help.yaml") Nothing Nothing (Just "help-db") (Just "localhost") (Just 8080) Nothing (Just "127.0.0.1")
 
 -- |Empty settings
 emptySettings ∷ TempSettings
-emptySettings = TempSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+emptySettings = TempSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- |Takes two TempSettings and returns a new TempSettings, favoring settings in the first over the second
 overrides ∷ TempSettings → TempSettings → TempSettings
@@ -114,22 +144,25 @@ overrides ns os = let yF = if isJust $ tempYmlFile ns
                       lF = if isJust $ tempLogFile ns
                              then tempLogFile ns
                              else tempLogFile os
+                      lC = if isJust $ tempLogCollection ns
+                             then tempLogCollection ns
+                             else tempLogCollection os
+                      db = if isJust $ tempDatabase ns
+                             then tempDatabase ns
+                             else tempDatabase os
                       aH = if isJust $ tempAdminHost ns
                              then tempAdminHost ns
                              else tempAdminHost os
                       aP = if isJust $ tempAdminPort ns
                              then tempAdminPort ns
                              else tempAdminPort os
-                      lP = if isJust $ tempLogPort ns
-                             then tempLogPort ns
-                             else tempLogPort os
-                      lC = if isJust $ tempLogCollection ns
-                             then tempLogCollection ns
-                             else tempLogCollection os
+                      ss = if isJust $ tempServers ns
+                             then tempServers ns
+                             else tempServers os
                       mH = if isJust $ tempMongoHost ns
                              then tempMongoHost ns
                              else tempMongoHost os
-                  in TempSettings yF lF aH aP lP lC mH
+                  in TempSettings yF lF lC db aH aP ss mH
 
 -- |Pull the YAML file from TempSettings. In the event that the current stack doesn't have a file, fallback to default.
 --

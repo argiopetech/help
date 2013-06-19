@@ -3,3 +3,6 @@ adminPort:     8080
 mongoHost:     127.0.0.1
 logPort:       7020
 logCollection: default
+servers:
+  - port: 9020
+    collection: apache
