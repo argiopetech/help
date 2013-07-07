@@ -6,3 +6,5 @@ logCollection: default
 servers:
   - port: 9020
     collection: apache
+    recordFormat: "%s8`time`, %s11`date` - %s' '`status` - %s_`message`"
+    sampleRecord: "00:00:01, 01/Jan/1970 - Error - xbmspts owtt cube zndm iegwlqq nnlqdr oqnn qurq bpypdx\n"

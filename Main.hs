@@ -7,23 +7,25 @@ import Help.Settings
 import Help.UI.WebSearch
 import Help.UI.AdminConsole
 
+import Data.Conduit (runResourceT)
+
 import Control.Concurrent hiding (forkIO)
 import Control.Concurrent.STM
 import Control.Concurrent.Thread.Group
 
-import Control.Lens ((^$))
+import Control.Lens ((^.))
 
 main ∷ IO ()
 main = do
     settings ← loadSettings
 
-    if not $ null $ logFile ^$ settings
-      then loadFile settings
+    if not $ null $ settings^.logFile
+      then runResourceT $ loadFile settings
       else do
           g  ← new -- Creates a new thread group
 --          (t1, _) ← forkIO g $ webSearch settings
           (t2, _) ← forkIO g $ (adminConsole settings `catch` (\e -> print (e :: IOException)))
-          (t3, _) ← forkIO g $ (logInterface settings `catch` (\e -> print (e :: IOException)))
+          (t3, _) ← forkIO g $ runResourceT (logInterface settings `catch` (\e -> print (e :: IOException)))
 
           -- Cleans up all threads if any thread dies
           -- Each thread will need to clean up internally
@@ -33,5 +35,5 @@ main = do
 -- |Unlike @wait@ (which waits for all threads to exit), @waitAny@ waits for any thread to exit, then returns
 waitAny ∷ ThreadGroup → IO ()
 waitAny tg = do
-    on ← atomically $ nrOfRunning tg
-    atomically $ nrOfRunning tg >>= \n → when (n ≡ on) retry
+    nr ← atomically $ nrOfRunning tg
+    atomically $ nrOfRunning tg >>= \n → when (n ≡ nr) retry

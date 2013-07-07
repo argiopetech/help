@@ -14,7 +14,7 @@ cabal-version:       >=1.8
 
 executable help
   main-is:             Main.hs
-  extensions:          LambdaCase, NoImplicitPrelude, UnicodeSyntax
+  extensions:          LambdaCase, NoImplicitPrelude, UnicodeSyntax, PolyKinds, ScopedTypeVariables
   other-modules:       Help.UI
                        Help.Imports
                        Help.Settings
@@ -45,18 +45,50 @@ executable help
                      , attoparsec >= 0.10.4
                      , network-conduit >= 1.0
                      , aeson >= 0.6.0
+                     , resourcet >= 0.4.4
+                     , mtl >= 2.1
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
 Test-Suite test-help
   type:           exitcode-stdio-1.0
-  hs-source-dirs: test
+  hs-source-dirs: test,.
   main-is:        test-help.hs
-  extensions:     LambdaCase, NoImplicitPrelude, UnicodeSyntax
+  extensions:     LambdaCase, NoImplicitPrelude, UnicodeSyntax, PolyKinds, ScopedTypeVariables
+  other-modules:  Help.UI
+                  Help.Imports
+                  Help.Settings
+                  Help.Logging
+                  Help.Logging.Receive
+                  Help.Logging.Store
+                  Help.Logging.Parse
+                  Help.UI.AdminConsole.Internal
+                  Help.UI.WebSearch.Internal
+                  Help.UI.WebSearch
+                  Help.UI.AdminConsole
   build-depends:  base >= 4.6
                 , classy-prelude >= 0.5
                 , hspec >= 1.5
                 , QuickCheck >= 2.5
-  ghc-options: -Wall -threaded -with-rtsopts=-N
+                , classy-prelude >= 0.5
+                , threads >= 0.5
+                , stm >= 2.4
+                , base-unicode-symbols >= 0.2
+                , lens >= 3.6
+                , ekg >= 0.3
+                , text >= 0.11
+                , options >= 0.1
+                , yaml-config >= 0.0.1
+                , mongoDB >= 1.3
+                , bytestring >= 0.10
+                , transformers >= 0.3
+                , conduit >= 1.0.4
+                , attoparsec-conduit >= 1.0
+                , attoparsec >= 0.10.4
+                , network-conduit >= 1.0
+                , aeson >= 0.6.0
+                , resourcet >= 0.4.4
+                , mtl >= 2.1
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
 Benchmark bench-help
   type:           exitcode-stdio-1.0

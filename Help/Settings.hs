@@ -15,16 +15,21 @@ module Help.Settings ( -- *The Settings type
                        -- *Lens getters for TCPConnections
                      , port
                      , collection
+                     , parser
                        -- *Utilities
                      , loadSettings
                      ) where
 
 import Help.Imports
+import Help.Logging.Parse
 
 import Control.Lens.Getter (to, Getter)
 import qualified Data.Yaml.Config as YAML (lookup, load)
 
-import Data.Aeson.Types
+import Data.Aeson.Types hiding (Parser, parse)
+
+import Data.Attoparsec.Text
+import Database.MongoDB (Document)
 
 import Options
 
@@ -36,17 +41,31 @@ data Settings = Settings { _ymlFile  ∷ FilePath
                          , _adminPort ∷ Int
                          , _servers ∷ [TCPConnection]
                          , _mongoHost ∷ String
-                         } deriving (Show)
+                         }
 
 data TCPConnection = TCPConnection { _port ∷ Int
                                    , _collection ∷ Text
-                                   } deriving (Show)
+                                   , _parser ∷ Parser Document
+                                   }
 
 instance FromJSON TCPConnection where
-    parseJSON (Object v) = TCPConnection <$>
-                                v .: "port" <*>
-                                v .: "collection"
-    parseJSON _          = empty
+    parseJSON (Object v) = do
+        testRecord <- v .: "sampleRecord"
+        parserLine <- v .: "recordFormat"
+        let p = makeRecordParser parserLine
+        if not $ goodParser p testRecord
+           then fail $ "Specified parser does not parse line " ++ unpack parserLine
+           else do
+               TCPConnection <$> v .: "port"
+                             <*> v .: "collection"
+                             <*> pure p
+    parseJSON _        = mempty
+
+goodParser ∷ Parser Document → Text → Bool
+goodParser p t = let parseResult = parse p t
+                 in case parseResult of
+                      Done "" _ -> True
+                      _         -> False
 
 ymlFile ∷ Getter Settings FilePath
 ymlFile = to _ymlFile
@@ -74,6 +93,9 @@ port = to _port
 
 collection ∷ Getter TCPConnection Text
 collection = to _collection
+
+parser ∷ Getter TCPConnection (Parser Document)
+parser = to _parser
 
 mongoHost ∷ Getter Settings String
 mongoHost = to _mongoHost
