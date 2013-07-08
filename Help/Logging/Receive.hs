@@ -28,7 +28,10 @@ logInterface s = do
 
 -- |Uses a Conduit to iterate over the provided log file, parse log entries, and insert them into a database
 loadFile ∷ MonadResource m => Settings -> m ()
-loadFile s = do
-    (rk, pipe) ← allocate (runIOE $ connect $ host $ s^.mongoHost) close
-    sourceFile (unpack $ s^.logFile) $$ sink pipe mempty (s^.database) (s^.logCollection)
-    release rk
+loadFile s = if not $ isJust (s^.logParser)
+               then error "I don't even know how this happened, but the logParser is non-existant..."
+               else do
+                   let (Just p) = s^.logParser
+                   (rk, pipe) ← allocate (runIOE $ connect $ host $ s^.mongoHost) close
+                   sourceFile (unpack $ s^.logFile) $$ sink pipe p (s^.database) (s^.logCollection)
+                   release rk

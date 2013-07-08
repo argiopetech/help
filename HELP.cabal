@@ -47,7 +47,8 @@ executable help
                      , aeson >= 0.6.0
                      , resourcet >= 0.4.4
                      , mtl >= 2.1
-  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+                     , containers >= 0.5.0
+  ghc-options: -O2 -Wall -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
 Test-Suite test-help
   type:           exitcode-stdio-1.0
@@ -88,6 +89,7 @@ Test-Suite test-help
                 , aeson >= 0.6.0
                 , resourcet >= 0.4.4
                 , mtl >= 2.1
+                , containers >= 0.5.0
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
 Benchmark bench-help

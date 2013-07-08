@@ -8,6 +8,8 @@ import Test.QuickCheck
 
 import Help.Logging.Parse
 
+import Control.Exception (evaluate)
+
 import Data.Attoparsec.Text
 
 import Database.MongoDB
@@ -40,7 +42,12 @@ parserGeneratorSpec = do
         let res1 = maybeResult $ parse handLogEntry singleLog
             res2 = maybeResult $ parse (recipeToParser lexedRecipe) singleLog
         res1 `shouldBe` res2
+    it "Parses the whole line" $ do
+        let (Done r _) = parse (makeRecordParser parseRecipe) singleLog
+        r `shouldBe` ""
     it "Whole chain works" $ do
         let res1 = maybeResult $ parse (recipeToParser $ lexParser $ parseRecipe) singleLog
             res2 = maybeResult $ parse (recipeToParser lexedRecipe) singleLog
         res1 `shouldBe` res2
+    it "Fails if given a null parser" $ do
+        evaluate (makeRecordParser "") `shouldThrow` errorCall "Parser specification is empty string..."

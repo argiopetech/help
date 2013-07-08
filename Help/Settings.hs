@@ -5,6 +5,7 @@ module Help.Settings ( -- *The Settings type
                      , ymlFile
                      , logFile
                      , logCollection
+                     , logParser
                      , adminHost
                      , adminPort
                      , database
@@ -36,6 +37,7 @@ import Options
 data Settings = Settings { _ymlFile  ∷ FilePath
                          , _logFile  ∷ FilePath
                          , _logCollection ∷ Text
+                         , _logParser ∷ Maybe (Parser Document)
                          , _database ∷ Text
                          , _adminHost ∷ FilePath
                          , _adminPort ∷ Int
@@ -43,10 +45,23 @@ data Settings = Settings { _ymlFile  ∷ FilePath
                          , _mongoHost ∷ String
                          }
 
+
+
 data TCPConnection = TCPConnection { _port ∷ Int
                                    , _collection ∷ Text
                                    , _parser ∷ Parser Document
                                    }
+
+data TempSettings = TempSettings { tempYmlFile  ∷ Maybe FilePath
+                                 , tempLogFile  ∷ Maybe FilePath
+                                 , tempLogCollection ∷ Maybe Text
+                                 , tempLogParser ∷ Maybe (Parser Document)
+                                 , tempDatabase ∷ Maybe Text
+                                 , tempAdminHost ∷ Maybe String
+                                 , tempAdminPort ∷ Maybe Int
+                                 , tempServers ∷ Maybe [TCPConnection]
+                                 , tempMongoHost ∷ Maybe String
+                                 }
 
 instance FromJSON TCPConnection where
     parseJSON (Object v) = do
@@ -54,7 +69,7 @@ instance FromJSON TCPConnection where
         parserLine <- v .: "recordFormat"
         let p = makeRecordParser parserLine
         if not $ goodParser p testRecord
-           then fail $ "Specified parser does not parse line " ++ unpack parserLine
+           then error $ "Specified parser does not parse line " ++ unpack parserLine
            else do
                TCPConnection <$> v .: "port"
                              <*> v .: "collection"
@@ -75,6 +90,9 @@ logFile = to _logFile
 
 logCollection ∷ Getter Settings Text
 logCollection = to _logCollection
+
+logParser ∷ Getter Settings (Maybe (Parser Document))
+logParser = to _logParser
 
 database ∷ Getter Settings Text
 database = to _database
@@ -100,16 +118,6 @@ parser = to _parser
 mongoHost ∷ Getter Settings String
 mongoHost = to _mongoHost
 
-data TempSettings = TempSettings { tempYmlFile  ∷ Maybe FilePath
-                                 , tempLogFile  ∷ Maybe FilePath
-                                 , tempLogCollection ∷ Maybe Text
-                                 , tempDatabase ∷ Maybe Text
-                                 , tempAdminHost ∷ Maybe String
-                                 , tempAdminPort ∷ Maybe Int
-                                 , tempServers ∷ Maybe [TCPConnection]
-                                 , tempMongoHost ∷ Maybe String
-                                 }
-
 defineOptions "MainOptions" $ do
     stringOption "cliYml" "yamlFile" "help.yaml"
         "The default YAML configuration file"
@@ -117,6 +125,8 @@ defineOptions "MainOptions" $ do
         "A log file from which to import"
     textOption "cliLogCollection" "collection" "default"
         "The MongoDB collection to import to"
+    textOption "cliRecordFormat" "recordFormat" ""
+        "The format of the records in the log file"
 
 -- |Loads all settings and creates one authoritative set
 loadSettings ∷ IO Settings
@@ -127,15 +137,19 @@ loadSettings = do
 
 -- |Changes a TempSettings to a Settings, assuming it contains all required options
 verifySettings ∷ TempSettings → Settings
-verifySettings (TempSettings (Just s1) (Just s2) (Just s3) (Just s4) (Just s5) (Just s6) (Just s7) (Just s8)) = Settings s1 s2 s3 s4 s5 s6 s7 s8
+verifySettings (TempSettings (Just s1) (Just s2) (Just s3) s4 (Just s5) (Just s6) (Just s7) (Just s8) (Just s9)) = Settings s1 s2 s3 s4 s5 s6 s7 s8 s9
 verifySettings _ = error "Not all settings set" -- TODO: Handle this better
 
 -- |Loads command-line settings from the output of @getArgs@
 loadCLISettings ∷ IO TempSettings
-loadCLISettings = runCommand $ \opts _ ->
+loadCLISettings = runCommand $ \opts _ -> do
+                      let p = if null $ cliYml opts
+                                then Nothing
+                                else Just $! makeRecordParser $ cliRecordFormat opts
                       return $ emptySettings { tempYmlFile = (Just $ cliYml opts)
                                              , tempLogFile = (Just $ cliLogFile opts)
                                              , tempLogCollection = (Just $ cliLogCollection opts)
+                                             , tempLogParser = p
                                              }
 
 
@@ -148,15 +162,15 @@ loadYMLSettings yamlFile = do
         serve = YAML.lookup yaml "servers"
         mHost = YAML.lookup yaml "mongoHost"
         datab = YAML.lookup yaml "database"
-    return $ TempSettings Nothing Nothing datab Nothing aHost aPort serve mHost
+    return $ TempSettings Nothing Nothing datab Nothing Nothing aHost aPort serve mHost
 
 -- |Default settings
 defaultSettings ∷ TempSettings
-defaultSettings = TempSettings (Just "help.yaml") Nothing Nothing (Just "help-db") (Just "localhost") (Just 8080) Nothing (Just "127.0.0.1")
+defaultSettings = TempSettings (Just "help.yaml") Nothing Nothing Nothing (Just "help-db") (Just "localhost") (Just 8080) Nothing (Just "127.0.0.1")
 
 -- |Empty settings
 emptySettings ∷ TempSettings
-emptySettings = TempSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+emptySettings = TempSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- |Takes two TempSettings and returns a new TempSettings, favoring settings in the first over the second
 overrides ∷ TempSettings → TempSettings → TempSettings
@@ -169,6 +183,9 @@ overrides ns os = let yF = if isJust $ tempYmlFile ns
                       lC = if isJust $ tempLogCollection ns
                              then tempLogCollection ns
                              else tempLogCollection os
+                      lP = if isJust $ tempLogParser ns
+                             then tempLogParser ns
+                             else tempLogParser os
                       db = if isJust $ tempDatabase ns
                              then tempDatabase ns
                              else tempDatabase os
@@ -184,7 +201,7 @@ overrides ns os = let yF = if isJust $ tempYmlFile ns
                       mH = if isJust $ tempMongoHost ns
                              then tempMongoHost ns
                              else tempMongoHost os
-                  in TempSettings yF lF lC db aH aP ss mH
+                  in TempSettings yF lF lC lP db aH aP ss mH
 
 -- |Pull the YAML file from TempSettings. In the event that the current stack doesn't have a file, fallback to default.
 --

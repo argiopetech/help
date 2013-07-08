@@ -22,7 +22,9 @@ data ParseLang = ParseFixed Int Name
                | FixedString Text
 
 makeRecordParser ∷ Text → Parser Document
-makeRecordParser = recipeToParser . lexParser
+makeRecordParser t = if not $ null t
+                       then recipeToParser $ lexParser t
+                       else error "Parser specification is empty string..."
 
 lexParser ∷ Text → [ParseLang]
 lexParser t = case (parseOnly parser t) of
