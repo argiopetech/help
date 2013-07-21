@@ -23,7 +23,7 @@ data ParseLang = ParseFixed Int Name
 
 makeRecordParser ∷ Text → Parser Document
 makeRecordParser t = if not $ null t
-                       then recipeToParser $ lexParser t
+                       then recipeToParser $! lexParser t
                        else error "Parser specification is empty string..."
 
 lexParser ∷ Text → [ParseLang]
@@ -50,6 +50,8 @@ recipeToParser = sequence . go
 
 takeChars ∷ Label → Int → Text → Parser Field
 takeChars l n f = ((\s → l := String s) <$> (take n <* string f))
+{-# INLINE takeChars #-}
 
 goTill ∷ Label → Char → Text → Parser Field
 goTill l c f = ((\s → l := String s) <$> (takeTill (≡ c) <* string f))
+{-# INLINE goTill #-}

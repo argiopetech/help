@@ -73,7 +73,7 @@ instance FromJSON TCPConnection where
            else do
                TCPConnection <$> v .: "port"
                              <*> v .: "collection"
-                             <*> pure p
+                             <*> (pure $! p)
     parseJSON _        = mempty
 
 goodParser ∷ Parser Document → Text → Bool

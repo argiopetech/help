@@ -22,8 +22,7 @@ import Database.MongoDB (Pipe, AccessMode(UnconfirmedWrites), access, insertMany
 
 sink ∷ forall (m ∷ * → *). (MonadThrow m, MonadIO m) ⇒ Pipe → Parser Document → Text → Text → Sink ByteString m ()
 sink pipe parser db col = decode utf8 =$ go mempty
-    where {-# INLINE go #-}
-          go ∷ Seq Document -> Sink Text m ()
+    where go ∷ Seq Document -> Sink Text m ()
           go s = do
               await >>= \case
                     Nothing  → doInsert s
@@ -37,4 +36,3 @@ sink pipe parser db col = decode utf8 =$ go mempty
                               go mempty
                           else go (s |> l)
           doInsert = void . access pipe UnconfirmedWrites db . insertMany_ col . toList
-{-# INLINE sink #-}

@@ -23,13 +23,13 @@ main = do
       then runResourceT $ loadFile settings
       else do
           g  ← new -- Creates a new thread group
---          (t1, _) ← forkIO g $ webSearch settings
+          (t1, _) ← forkIO g $ webSearch settings
           (t2, _) ← forkIO g $ (adminConsole settings `catch` (\e -> print (e :: IOException)))
           (t3, _) ← forkIO g $ runResourceT (logInterface settings `catch` (\e -> print (e :: IOException)))
 
           -- Cleans up all threads if any thread dies
           -- Each thread will need to clean up internally
-          waitAny g `finally` mapM_ killThread [t2, t3]
+          waitAny g `finally` mapM_ killThread [t1, t2, t3]
 
 
 -- |Unlike @wait@ (which waits for all threads to exit), @waitAny@ waits for any thread to exit, then returns
