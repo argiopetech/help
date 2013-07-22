@@ -7,12 +7,15 @@
 module Help.UI.WebSearch where
 
 import Help.Imports hiding (find)
+import qualified Prelude as P
 import Help.Settings
 
 import Yesod hiding (count)
+import Yesod.Form.Jquery
 import Network.Wai.Handler.Warp (run)
---import Help.UI.WebSearch.Internal
 
+import Data.Text (init, tail)
+import Data.Text.Read (decimal)
 import Control.Lens.Getter ((^.))
 import Database.MongoDB as M
 
@@ -27,15 +30,25 @@ data Minimal = Minimal { settings ∷ Settings }
 instance RenderMessage Minimal FormMessage where
     renderMessage _ _ = defaultFormMessage
 
+-- mkYesodData "Minimal"  [parseRoutes|
+--     / QueryR GET
+-- |]
+
+-- mkYesodDispatch "Minimal" resourcesApp
+instance YesodJquery Minimal
+
 mkYesod "Minimal" [parseRoutes|
-    /query QueryR GET
-    /cols ColsR GET
-    /colsrels ColsRelsR GET
+    / QueryR GET
 |]
 
 instance Yesod Minimal where
     defaultLayout widget = do
-        pc <- widgetToPageContent widget
+        master <- getYesod
+        pc <- widgetToPageContent $ do
+                  addScriptEither $ urlJqueryJs master
+                  addStylesheetRemote "http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css"
+                  addScriptRemote "http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"
+                  widget
         giveUrlRenderer [hamlet|
             $doctype 5
             <html lang="en">
@@ -48,24 +61,34 @@ instance Yesod Minimal where
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     ^{pageHead pc}
                 <body>
+                  <div .container style="width=80%">
                     ^{pageBody pc}
             |]
 
+--getBootstrapR ∷ Handler Html
+--getBootstrapR = defaultLayout $ do
+--    toWidget $(luciusFile "Help/UI/WebSearch/bootstrap.lucius")
+--    toWidget $(juliusFile "Help/UI/WebSearch/bootstrap.julius")
+
+data QueryType = WithSearch { _t ∷ Text, skipRecs ∷ Word32 }
+               | WithoutSearch { skipRecs ∷ Word32 }
+
 getQueryR ∷ Handler Html
 getQueryR = do
-    ((result, formWidget), formEnctype) <- runFormGet carForm
-    let query = case result of
-            FormSuccess res -> Just res
-            _ -> Nothing
+    v1 ← lookupGetParam "query"
+    v2 ← (maybe (Right (0 ∷ Word32,"")) decimal) <$> (lookupGetParam "skip")
+    let input = case (v1, v2) of
+                  (Just q, s) → WithSearch q $ either (const 0) (fromIntegral . fst) s
+                  (_, s)      → WithoutSearch $ either (const 0) (fromIntegral . fst) s
 
     s ← settings <$> getYesod
     pipe ← liftIO $ runIOE $ connect (host $ s^.mongoHost)
     eResults ← liftIO $ access pipe slaveOk (s^.database) $ do
-                curs ← case query of
-                         (Just (SearchQuery q)) → find $ (select ["$or" :=
-                                                    (M.Array [ Doc ["message" =: Regex q ""]
-                                                             , Doc ["status"  =: Regex q ""]])] "default") {M.sort = ["$natural" := Int32 (-1)], limit = 10}
-                         Nothing  → find $ (select [] "default") {limit = 10, M.sort = ["$natural" := Int32 (-1)]}
+                curs ← case input of
+                         (WithSearch query skipRec) → find $ (select ["$or" :=
+                                                    (M.Array [ Doc ["message" =: Regex query ""]
+                                                             , Doc ["status"  =: Regex query ""]])] "default") {M.sort = ["$natural" := Int32 (-1)], limit = 10, skip = skipRec}
+                         (WithoutSearch skipRec)    → find $ (select [] "default") {skip = skipRec, limit = 10, M.sort = ["$natural" := Int32 (-1)]}
                 results <- rest curs
                 closeCursor curs
                 return $ map (exclude ["_id"]) results
@@ -74,80 +97,64 @@ getQueryR = do
     results ← case eResults of
                 (Right r) → return r
                 (Left  f) → invalidArgs [show f]
+
     defaultLayout $ do
                 setTitle "Query"
                 [whamlet|
-<form method=get action=@{QueryR}#form enctype=#{formEnctype}>
-  ^{formWidget}
-    <input type="submit" value="Send it!">
-<ul>
-  $forall document <- results
-    <li>
-      <ul>
-        $forall field <- document
-          <li><b>#{retLabel field}</b>
-        $forall field <- document
-          <li>#{retValue field}
-|]
+<header .clearfix>
+  <h3 .pull-right .muted>
+    Haskell Enterprise Logging Platform
+  <h3 .pull-left>HELP
+<hr>
 
-getColsR ∷ Handler Html
-getColsR = defaultLayout $ do
-    s ← settings <$> getYesod
-    pipe ← liftIO $ runIOE $ connect (host $ s^.mongoHost)
-    eResults ← liftIO $ access pipe slaveOk (s^.database) $ do
-                               allCollections >>= (return . filter (/="system.indexes"))
-    results ← case eResults of
-                (Right r) → return r
-                (Left  f) → invalidArgs [show f]
-    setTitle "Query"
-    [whamlet|
-<ul>
-  $forall col <- results
-    <li>
-      #{col}
-|]
-    liftIO $ close pipe
+<div #form>
+  <form method=get action=@{QueryR}#form .form-search>
+    <input type=hidden name=skip value=0>
+    <input type=search name=query value=#{fromMaybe "" v1} autofocus . input-medium .search-query>
+    <button type=submit .btn>
+      Search
 
-getColsRelsR ∷ Handler Html
-getColsRelsR = defaultLayout $ do
-    s ← settings <$> getYesod
-    pipe ← liftIO $ runIOE $ connect (host $ s^.mongoHost)
-    eResults ← liftIO $ access pipe slaveOk (s^.database) $ do
-                               cols ← allCollections >>= (return . filter (/="system.indexes"))
-                               curs ← mapM (\col → find $ (select [] col) {limit = 10, M.sort = ["$natural" := Int32 (-1)]}) cols
-                               results <- mapM rest curs
-                               _ ← mapM closeCursor curs
-                               return $ map (map $ exclude ["_id"]) results
-    results ← case eResults of
-                (Right r) → return r
-                (Left  f) → invalidArgs [show f]
-    setTitle "Query"
-    [whamlet|
-<ul>
-  $forall collection <- results
-    <ul>
-      $forall document <- collection
-        <li>
-          <ul>
-            $forall field <- document
-              <li><b>#{retLabel field}</b>
-            $forall field <- document
-              <li>#{retValue field}
+<div #results>
+  <table .table .table-striped>
+    <tbody>
+      $forall document <- results
+        <tr>
+          $forall field <- document
+            <td>
+$#              <span rel="tooltip" data-toggle="tooltip" title=#{retLabel field}>
+              <small .muted>
+                #{retLabel field}
+              <br>
+              #{retValue field}
+<div #nav>
+  $if skipRecs input >= 10
+    <div .pull-left>
+      <form method=get action=@{QueryR}#form >
+        <input type=hidden name=skip value=#{P.show $ skipRecs input - 10}>
+        <input type=hidden name=query value=#{fromMaybe "" v1} autofocus>
+        <input type=submit .textButton value="Prev 10">
+  <div .pull-right>
+    <form method=get action=@{QueryR}#form >
+      <input type=hidden name=skip value=#{P.show $ skipRecs input + 10}>
+      <input type=hidden name=query value=#{fromMaybe "" v1} autofocus>
+      <input type=submit .textButton value="Next 10">
 |]
-    liftIO $ close pipe
-
+                toWidget $ [julius|
+$(document).ready(function () {
+    $("[rel=tooltip]").tooltip();
+});
+|]
+                toWidget $ [cassius|
+.textButton
+   border: none;
+   background-color: transparent;
+   padding: 0;
+   text-decoration: underline; /* if desired */
+   color: #00c;  /* or whatever other color you want */
+|]
 
 retValue ∷ M.Field → Text
-retValue = show . value
+retValue = tail . init . show . value
 
 retLabel ∷ M.Field → Text
-retLabel = show . label
-
-data SearchQuery = SearchQuery Text
-  deriving Show
-
-carAForm ∷ AForm Handler SearchQuery
-carAForm = SearchQuery <$> (areq textField "Search" Nothing)
-
-carForm ∷ Html → MForm Handler (FormResult SearchQuery, Widget)
-carForm = renderDivs carAForm
+retLabel = label
